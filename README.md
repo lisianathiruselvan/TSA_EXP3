@@ -11,33 +11,72 @@ type to fit the data.
 4. Store the results in an array
 5. Represent the result in graphical representation as given below.
 ### PROGRAM:
+import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 
-import numpy as np
+# Load dataset
+data = pd.read_csv('/content/World Population.csv')
 
-data = [3, 16, 156, 47, 246, 176, 233, 140, 130,
-101, 166, 201, 200, 116, 118, 247,
-209, 52, 153, 232, 128, 27, 192, 168, 208,
-187, 228, 86, 30, 151, 18, 254,
-76, 112, 67, 244, 179, 150, 89, 49, 83, 147, 90,
-33, 6, 158, 80, 35, 186, 127]
+# Extract Year from "Date" column (taking first two characters and converting to full year)
+data['Year'] = data['Date'].astype(str).str[:2].astype(int) + 2000  # Assuming years are 2000+
 
-lags = range(35)
+# Remove "%" from the "Percentage" column and convert it to a numeric value
+data['Percentage'] = data['Percentage'].str.replace('%', '').astype(float)
 
+# Group by Year and compute the mean percentage (assuming world total percentage remains ~100%)
+resampled_data = data.groupby('Year', as_index=False)['Percentage'].mean()
 
-#Pre-allocate autocorrelation table
+# Extract values
+years = resampled_data['Year'].tolist()
+percentage = resampled_data['Percentage'].tolist()
 
-#Mean
+# Preprocessing for Trend Calculation
+X = [i - years[len(years) // 2] for i in years]
+x2 = [i ** 2 for i in X]
+xy = [i * j for i, j in zip(X, percentage)]
 
-#Variance
+# Polynomial Trend Estimation (Degree 2)
+x3 = [i ** 3 for i in X]
+x4 = [i ** 4 for i in X]
+x2y = [i * j for i, j in zip(x2, percentage)]
 
-#Normalized data
+coeff = [[len(X), sum(X), sum(x2)],
+         [sum(X), sum(x2), sum(x3)],
+         [sum(x2), sum(x3), sum(x4)]]
 
-#Go through lag components one-by-one
+Y = [sum(percentage), sum(xy), sum(x2y)]
+A = np.array(coeff)
+B = np.array(Y)
 
-#display the graph
+solution = np.linalg.solve(A, B)
+a_poly, b_poly, c_poly = solution
+poly_trend = [a_poly + b_poly * X[i] + c_poly * (X[i] ** 2) for i in range(n)]
+# Print trend equations
+print(f"Linear Trend: y={a:.2f} + {b:.2f}x")
+print(f"\nPolynomial Trend: y={a_poly:.2f} + {b_poly:.2f}x + {c_poly:.2f}x²")
+
+# Add trends to dataset
+resampled_data['Linear Trend'] = linear_trend
+resampled_data['Polynomial Trend'] = poly_trend
+
+# Set index to 'Year'
+resampled_data.set_index('Year', inplace=True)
+
+# Visualization
+resampled_data['Percentage'].plot(kind='line', color='blue', marker='o', label='Actual Percentage')
+resampled_data['Linear Trend'].plot(kind='line', color='black', linestyle='--', label='Linear Trend')
+resampled_data['Polynomial Trend'].plot(kind='line', color='red', marker='o', label='Polynomial Trend')
+
+plt.xlabel('Year')
+plt.ylabel('Population Percentage (%)')
+plt.legend()
+plt.title('World Population Percentage Trend Estimation')
+plt.grid()
+plt.show()+
 
 ### OUTPUT:
+![image](https://github.com/user-attachments/assets/39bc982d-3e72-4ac3-bb6d-871af0dd3fcd)
 
 ### RESULT:
         Thus we have successfully implemented the auto correlation function in python.
